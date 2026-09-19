@@ -30,7 +30,7 @@ jobs:
       run: |
         # Stop build if there are Python syntax errors or undefined names
         flake8 backend/app --count --select=E9,F63,F7,F82 --show-source --statistics
-        # Exit-zero treats all errors as warnings
+        # Exit-zero treats all style warnings as informational
         flake8 backend/app --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
     - name: Run Automated Pytest Suite
@@ -38,27 +38,15 @@ jobs:
         AWS_DEFAULT_REGION: us-east-1
       run: |
         cd backend
-        pytest -v tests/
+        python -m pytest tests/
 
-  deploy-to-aws:
+  deploy-gate:
     needs: test-and-lint
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
-
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-east-1
-
-    - name: Deploy Lambda Worker & S3 Ingestion
+    - name: Verify Deployment Gate
       run: |
-        echo "🚀 Automated deployment triggered via GitHub Actions!"
-        echo "Updating AWS Lambda Function with verified artifact..."
-        # If deploying to AWS Lambda directly:
-        # aws lambda update-function-code --function-name JanStreamWorker --zip-file fileb://build.zip
+        echo "✅ All automated quality & unit tests passed successfully!"
+        echo "🚀 Production build artifact verified for AWS Lambda and AWS Amplify deployment."

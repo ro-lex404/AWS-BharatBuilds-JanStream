@@ -5,4 +5,4 @@ pydantic>=2.6.0
 python-multipart>=0.0.9
 pytest>=8.0.0
 requests>=2.31.0
-moto[s3,sqs,dynamodb,cloudwatch]>=5.0.0
+mangum>=0.17.0

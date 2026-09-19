@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from typing import Dict, Any, List, Optional
 import os
 import logging
+from mangum import Mangum
 
 from app.services.s3_service import S3Service
 from app.services.sqs_service import SQSService
@@ -145,3 +146,8 @@ def trigger_worker_batch():
     """Manually triggers worker batch processing (useful for demonstrations)."""
     count = worker.poll_and_process_batch(max_messages=10)
     return {"status": "SUCCESS", "messages_processed": count}
+
+
+# AWS Lambda entrypoint adapter
+handler = Mangum(app)
+
