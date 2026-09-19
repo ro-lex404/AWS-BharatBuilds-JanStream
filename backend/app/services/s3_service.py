@@ -18,16 +18,30 @@ class S3Service:
         self.bucket_name = bucket_name or os.environ.get("S3_BUCKET_NAME", "janstream-ingest-bucket")
         self.region_name = os.environ.get("AWS_DEFAULT_REGION", region_name)
         
-        # Ensure client has credentials for signing even in offline/local mode
-        access_key = os.environ.get("AWS_ACCESS_KEY_ID", "test_access_key")
-        secret_key = os.environ.get("AWS_SECRET_ACCESS_KEY", "test_secret_key")
+        session_token = os.environ.get("AWS_SESSION_TOKEN")
+        access_key = os.environ.get("AWS_ACCESS_KEY_ID")
+        secret_key = os.environ.get("AWS_SECRET_ACCESS_KEY")
         
-        self.s3_client = boto3.client(
-            "s3",
-            region_name=self.region_name,
-            aws_access_key_id=access_key,
-            aws_secret_access_key=secret_key
-        )
+        # When running in AWS Lambda, pass session token or use default credential provider
+        if access_key and access_key != "test_access_key":
+            client_kwargs = {
+                "region_name": self.region_name,
+                "aws_access_key_id": access_key,
+                "aws_secret_access_key": secret_key,
+            }
+            if session_token:
+                client_kwargs["aws_session_token"] = session_token
+            self.s3_client = boto3.client("s3", **client_kwargs)
+        else:
+            try:
+                self.s3_client = boto3.client("s3", region_name=self.region_name)
+            except Exception:
+                self.s3_client = boto3.client(
+                    "s3",
+                    region_name=self.region_name,
+                    aws_access_key_id="test_access_key",
+                    aws_secret_access_key="test_secret_key"
+                )
 
     def generate_presigned_upload_url(
         self,
