@@ -346,7 +346,7 @@
       try {
         const presignResp = await fetch(`${API_BASE}/api/submissions/presigned-url`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "text/plain" },
           body: JSON.stringify({ filename, citizen_phone: "+91 98450 11223", description: desc })
         });
         if (presignResp.ok) {
@@ -392,7 +392,7 @@
       try {
         const confirmResp = await fetch(`${API_BASE}/api/submissions/confirm-upload`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "text/plain" },
           body: JSON.stringify({
             submission_id: submissionId,
             description: desc,
