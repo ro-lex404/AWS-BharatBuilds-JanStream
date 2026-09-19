@@ -83,6 +83,58 @@ class S3Service:
             logger.error(f"Failed to generate presigned URL: {e}")
             raise RuntimeError(f"S3 Presigned URL error: {str(e)}")
 
+    def generate_presigned_put_url(
+        self,
+        filename: str,
+        content_type: str = "text/plain",
+        expires_in_seconds: int = 300
+    ) -> Dict[str, Any]:
+        """
+        Generates a direct S3 Presigned PUT URL.
+        Includes STS temporary session token in the query string automatically.
+        """
+        submission_id = str(uuid.uuid4())
+        s3_key = f"uploads/{submission_id}/{filename}"
+
+        try:
+            url = self.s3_client.generate_presigned_url(
+                ClientMethod="put_object",
+                Params={
+                    "Bucket": self.bucket_name,
+                    "Key": s3_key,
+                    "ContentType": content_type
+                },
+                ExpiresIn=expires_in_seconds
+            )
+            logger.info(f"Generated presigned PUT URL for key: {s3_key}")
+            return {
+                "submission_id": submission_id,
+                "s3_key": s3_key,
+                "bucket": self.bucket_name,
+                "upload_url": url,
+                "method": "PUT",
+                "content_type": content_type,
+                "expires_in_seconds": expires_in_seconds
+            }
+        except ClientError as e:
+            logger.error(f"Failed to generate presigned PUT URL: {e}")
+            raise RuntimeError(f"S3 Presigned PUT error: {str(e)}")
+
+    def put_object(self, s3_key: str, data: bytes, content_type: str = "text/plain") -> bool:
+        """Saves object bytes directly into the S3 bucket."""
+        try:
+            self.s3_client.put_object(
+                Bucket=self.bucket_name,
+                Key=s3_key,
+                Body=data,
+                ContentType=content_type
+            )
+            logger.info(f"Successfully saved object to s3://{self.bucket_name}/{s3_key}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to put object {s3_key} into bucket {self.bucket_name}: {e}")
+            return False
+
     def get_object_bytes(self, s3_key: str) -> bytes:
         """Fetches object bytes from S3 for worker processing."""
         try:

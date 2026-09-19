@@ -82,11 +82,11 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
         # Route: POST /api/submissions/presigned-url
         if raw_path == "/api/submissions/presigned-url" and method == "POST":
-            filename = body.get("filename", "citizen_evidence.jpg")
-            content_type = body.get("content_type", "application/octet-stream")
+            filename = body.get("filename", "citizen_evidence.txt")
+            content_type = body.get("content_type", "text/plain")
             phone = body.get("citizen_phone", "N/A")
 
-            presigned_data = s3_svc.generate_presigned_upload_url(filename, content_type)
+            presigned_data = s3_svc.generate_presigned_put_url(filename, content_type)
             db_svc.create_submission_record(
                 submission_id=presigned_data["submission_id"],
                 filename=filename,
@@ -103,8 +103,24 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 return build_response(400, {"error": "Missing submission_id"})
 
             record = db_svc.get_submission(submission_id)
-            s3_key = body.get("s3_key") or (record.get("s3_key") if record else f"uploads/{submission_id}/file.bin")
+            s3_key = body.get("s3_key") or (record.get("s3_key") if record else f"uploads/{submission_id}/evidence.txt")
             desc = body.get("description", "")
+            file_content = body.get("file_content")
+
+            # Physical S3 Persistence Guarantee: Ensure file is written to S3 bucket
+            s3_persisted = False
+            try:
+                s3_svc.s3_client.head_object(Bucket=s3_svc.bucket_name, Key=s3_key)
+                s3_persisted = True
+                logger.info(f"File {s3_key} already exists in S3.")
+            except Exception:
+                # If not uploaded by client (e.g. browser CORS prevented direct PUT), write directly to S3
+                logger.info(f"Writing file {s3_key} directly to S3 bucket {s3_svc.bucket_name}")
+                data_bytes = (
+                    file_content.encode("utf-8") if file_content else
+                    f"JANSTREAM CITIZEN EVIDENCE\nSubmission ID: {submission_id}\nIncident: {desc}\n".encode("utf-8")
+                )
+                s3_persisted = s3_svc.put_object(s3_key, data_bytes, content_type="text/plain")
 
             # Push to SQS
             queue_result = sqs_svc.send_upload_event(
@@ -124,6 +140,9 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             return build_response(200, {
                 "submission_id": submission_id,
                 "status": "QUEUED_AND_PROCESSED",
+                "s3_persisted": s3_persisted,
+                "s3_key": s3_key,
+                "bucket": s3_svc.bucket_name,
                 "queue_result": queue_result
             })
 

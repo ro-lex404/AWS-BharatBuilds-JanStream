@@ -339,6 +339,9 @@
       let submissionId = "sub-" + Math.random().toString(36).substring(2, 8);
       let s3Key = `uploads/${submissionId}/${filename}`;
       let bucketName = "janstream-citizen-uploads-rolex";
+      let uploadUrl = null;
+
+      const fileContent = `JANSTREAM CITIZEN EVIDENCE RECORD\nSubmission ID: ${submissionId}\nIncident: ${desc}\nTimestamp: ${new Date().toISOString()}\nTarget Bucket: ${bucketName}`;
 
       try {
         const presignResp = await fetch(`${API_BASE}/api/submissions/presigned-url`, {
@@ -351,12 +354,27 @@
           submissionId = d.submission_id;
           s3Key = d.s3_key;
           bucketName = d.bucket || bucketName;
-          logTerminal("INFO", "S3", `AWS Lambda issued Presigned URL for bucket '${bucketName}' (Key: ${s3Key})`);
-        } else {
-          logTerminal("INFO", "S3", `Presigned URL issued. Direct PUT to S3 bypassing server RAM (0.3s)`);
+          uploadUrl = d.upload_url;
+          logTerminal("INFO", "S3", `AWS Presigned PUT URL generated for s3://${bucketName}/${s3Key}`);
         }
       } catch (e) {
-        logTerminal("INFO", "S3", `Presigned URL issued. Direct PUT to S3 bypassing server RAM (0.3s)`);
+        logTerminal("WARN", "S3", `Presigned URL generation: ${e.message}`);
+      }
+
+      // Physical S3 Direct Upload Attempt
+      if (uploadUrl) {
+        try {
+          const s3Put = await fetch(uploadUrl, {
+            method: "PUT",
+            headers: { "Content-Type": "text/plain" },
+            body: fileContent
+          });
+          if (s3Put.ok) {
+            logTerminal("INFO", "S3", `✅ Direct S3 PUT SUCCESS! Object stored in s3://${bucketName}/${s3Key}`);
+          }
+        } catch (s3Err) {
+          logTerminal("WARN", "S3", `Direct browser-to-S3 restricted by S3 CORS. Delegating persistence to Lambda.`);
+        }
       }
 
       stats.s3++;
@@ -365,7 +383,7 @@
 
       await new Promise(r => setTimeout(r, 400));
 
-      // 2. SQS Enqueue via AWS Lambda
+      // 2. SQS Enqueue & Lambda S3 Persistence Guarantee
       stats.sqs++;
       updateNodes();
       highlightNode("node-sqs", "amber-500");
@@ -375,12 +393,20 @@
         const confirmResp = await fetch(`${API_BASE}/api/submissions/confirm-upload`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ submission_id: submissionId, description: desc, s3_key: s3Key })
+          body: JSON.stringify({
+            submission_id: submissionId,
+            description: desc,
+            s3_key: s3Key,
+            file_content: fileContent
+          })
         });
         if (confirmResp.ok) {
           const cData = await confirmResp.json();
           sqsMsgId = cData.queue_result?.message_id || sqsMsgId;
           logTerminal("INFO", "SQS", `Enqueued to Amazon SQS (MessageId: ${sqsMsgId.slice(0, 12)}...). Backpressure buffer armed.`);
+          if (cData.s3_persisted) {
+            logTerminal("INFO", "S3", `✅ S3 Bucket Verified: Stored object s3://${cData.bucket || bucketName}/${cData.s3_key || s3Key}`);
+          }
         } else {
           logTerminal("INFO", "SQS", `Message buffered in queue (SubmissionID: ${submissionId.slice(0, 8)}...). Backpressure protected.`);
         }
