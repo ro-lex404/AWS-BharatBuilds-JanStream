@@ -26,11 +26,8 @@ db_svc = DynamoDBService()
 metrics_svc = MetricsService()
 worker = JanStreamWorker(s3_service=s3_svc, sqs_service=sqs_svc, dynamodb_service=db_svc, metrics_service=metrics_svc)
 
-CORS_HEADERS = {
-    "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "Content-Type,Authorization,X-Requested-With",
-    "Access-Control-Allow-Methods": "GET,POST,OPTIONS"
+RESPONSE_HEADERS = {
+    "Content-Type": "application/json"
 }
 
 
@@ -44,7 +41,7 @@ def build_response(status_code: int, data: Any) -> Dict[str, Any]:
 
     return {
         "statusCode": status_code,
-        "headers": CORS_HEADERS,
+        "headers": RESPONSE_HEADERS,
         "body": json.dumps(data, default=decimal_default)
     }
 
