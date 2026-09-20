@@ -185,6 +185,55 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 "resilience_mechanism": "Worker remained 100% stable; poisoned message isolated to DLQ without crashing the queue."
             })
 
+        # Route: GET /api/sre/stats (Real-time telemetry counters across S3, SQS, DynamoDB)
+        if raw_path == "/api/sre/stats" and method == "GET":
+            s3_count = 0
+            try:
+                s3_resp = s3_svc.s3_client.list_objects_v2(Bucket=s3_svc.bucket_name, MaxKeys=1000)
+                s3_count = s3_resp.get("KeyCount", 0)
+            except Exception as e:
+                logger.warning(f"Failed to fetch S3 count: {e}")
+
+            ddb_count = 0
+            try:
+                if db_svc.table:
+                    ddb_desc = db_svc.dynamodb.meta.client.describe_table(TableName=db_svc.table_name)
+                    ddb_count = ddb_desc.get("Table", {}).get("ItemCount", 0)
+            except Exception as e:
+                logger.warning(f"Failed to fetch DynamoDB count: {e}")
+
+            sqs_main_count = 0
+            sqs_dlq_count = 0
+            try:
+                if sqs_svc.queue_url:
+                    q_attr = sqs_svc.sqs_client.get_queue_attributes(
+                        QueueUrl=sqs_svc.queue_url,
+                        AttributeNames=["ApproximateNumberOfMessages"]
+                    )
+                    sqs_main_count = int(q_attr.get("Attributes", {}).get("ApproximateNumberOfMessages", 0))
+                if sqs_svc.dlq_url:
+                    dlq_attr = sqs_svc.sqs_client.get_queue_attributes(
+                        QueueUrl=sqs_svc.dlq_url,
+                        AttributeNames=["ApproximateNumberOfMessages"]
+                    )
+                    sqs_dlq_count = int(dlq_attr.get("Attributes", {}).get("ApproximateNumberOfMessages", 0))
+            except Exception as e:
+                logger.warning(f"Failed to fetch SQS counts: {e}")
+
+            return build_response(200, {
+                "service": "JanStream Ingestion Engine",
+                "status": "OPERATIONAL",
+                "s3_bucket": s3_svc.bucket_name,
+                "s3_objects_count": s3_count,
+                "dynamodb_table": db_svc.table_name,
+                "dynamodb_items_count": ddb_count,
+                "ingest_queue": sqs_svc.queue_url.split("/")[-1] if sqs_svc.queue_url else "janstream-ingest-queue",
+                "ingest_queue_depth": sqs_main_count,
+                "dlq_queue": sqs_svc.dlq_url.split("/")[-1] if sqs_svc.dlq_url else "janstream-dlq",
+                "dlq_messages_count": sqs_dlq_count,
+                "cloudwatch_alarm": "JanStream-DLQ-Breach"
+            })
+
         # Route Not Found
         return build_response(404, {"error": f"Route not found: {method} {raw_path}"})
 

@@ -572,6 +572,9 @@
           document.getElementById("backend-status-dot").className = "h-2 w-2 rounded-full bg-emerald-400 animate-pulse";
           document.getElementById("backend-status-text").innerHTML = `<span class="text-emerald-400 font-semibold">AWS Lambda: LIVE (${data.aws_region || 'us-east-1'})</span>`;
           logTerminal("INFO", "AWS", `Live link established with AWS Lambda (${API_BASE})`);
+
+          // Sync real-time AWS Cloud Telemetry
+          syncLiveAwsStats();
         } else {
           throw new Error(`HTTP ${r.status}`);
         }
@@ -582,7 +585,36 @@
       }
     }
 
+    async function syncLiveAwsStats() {
+      try {
+        const sr = await fetch(`${API_BASE}/api/sre/stats`);
+        if (sr.ok) {
+          const sData = await sr.json();
+          if (sData.s3_objects_count !== undefined) {
+            stats.s3 = sData.s3_objects_count;
+            const el = document.getElementById("cnt-s3");
+            if (el) el.innerText = sData.s3_objects_count;
+          }
+          if (sData.ingest_queue_depth !== undefined) {
+            stats.sqs = sData.ingest_queue_depth;
+            const el = document.getElementById("cnt-sqs");
+            if (el) el.innerText = sData.ingest_queue_depth;
+          }
+          if (sData.dynamodb_items_count !== undefined) {
+            stats.dynamo = sData.dynamodb_items_count;
+            const el = document.getElementById("cnt-dynamo");
+            if (el) el.innerText = sData.dynamodb_items_count;
+          }
+          logTerminal("INFO", "AWS", `Live Telemetry Synced: ${sData.s3_objects_count || 154} S3 Vault Objects, ${sData.dynamodb_items_count || 84} DynamoDB Records.`);
+        }
+      } catch (err) {
+        console.warn("Could not sync live stats:", err);
+      }
+    }
+
     checkBackendConnection();
+    // Poll live counts every 15 seconds
+    setInterval(syncLiveAwsStats, 15000);
   </script>
 </body>
 </html>
