@@ -25,6 +25,14 @@ class SQSService:
         self.dlq_url = dlq_url or os.environ.get("SQS_DLQ_URL", "")
         self.sqs_client = boto3.client("sqs", region_name=self.region_name)
         
+        # If queue_url is just a queue name (not full https URL), resolve it
+        if self.queue_url and not self.queue_url.startswith("https://"):
+            try:
+                q_resp = self.sqs_client.get_queue_url(QueueName=self.queue_url)
+                self.queue_url = q_resp.get("QueueUrl", self.queue_url)
+            except Exception as e:
+                logger.warning(f"Could not resolve queue URL for {self.queue_url}: {e}")
+        
         # Local mock queue buffer for running locally without live AWS SQS credentials
         self._local_buffer: List[Dict[str, Any]] = []
 
