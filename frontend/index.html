@@ -85,7 +85,7 @@
       <div class="flex items-center justify-between mb-4">
         <div>
           <h2 class="text-xs font-bold uppercase tracking-widest text-slate-400">Interactive Cloud Telemetry Pipeline</h2>
-          <p class="text-[11px] text-slate-500">Live data flow visualization showing asynchronous backpressure and zero server RAM consumption</p>
+          <p class="text-[11px] text-slate-500">Live data flow visualization showing asynchronous SQS backpressure and direct-to-S3 evidence ingestion</p>
         </div>
         <div class="flex items-center space-x-2">
           <span class="text-[11px] text-slate-400">Pipeline State:</span>
@@ -227,17 +227,20 @@
           </div>
         </div>
 
-        <!-- Metric KPI Cards -->
+        <!-- Architectural Status Cards -->
         <div class="grid grid-cols-2 gap-3">
           <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3">
-            <div class="text-[10px] text-slate-400 uppercase">Avg Ingestion Latency</div>
-            <div id="kpi-latency" class="text-lg font-bold text-emerald-400 mt-1">210 ms</div>
-            <div class="text-[9px] text-slate-500">S3 Direct Upload</div>
+            <div class="text-[10px] text-slate-400 uppercase">CloudWatch Alarm</div>
+            <div class="text-sm font-bold text-emerald-400 mt-1 font-mono flex items-center space-x-1.5">
+              <span class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>ARMED</span>
+            </div>
+            <div class="text-[9px] text-slate-500 truncate">JanStream-DLQ-Breach</div>
           </div>
           <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3">
-            <div class="text-[10px] text-slate-400 uppercase">Server RAM Saved</div>
-            <div id="kpi-ram" class="text-lg font-bold text-blue-400 mt-1">100 %</div>
-            <div class="text-[9px] text-slate-500">Direct S3 Bypass</div>
+            <div class="text-[10px] text-slate-400 uppercase">Infrastructure Cost</div>
+            <div class="text-sm font-bold text-blue-400 mt-1 font-mono">$0.00 / mo</div>
+            <div class="text-[9px] text-slate-500">100% Scale-to-Zero</div>
           </div>
         </div>
 
