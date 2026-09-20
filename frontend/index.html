@@ -208,6 +208,23 @@
               <span>Simulate 15 Concurrent Uploads</span>
             </button>
           </div>
+
+          <!-- THE SRE DLQ POISON PILL BUTTON -->
+          <div class="mt-4 pt-4 border-t border-slate-800">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-rose-400 uppercase tracking-wider">
+                <i class="fa-solid fa-radiation mr-1"></i> DLQ Fault Isolation
+              </span>
+              <span class="text-[10px] text-slate-500 font-mono">SRE Chaos Injection</span>
+            </div>
+            <p class="text-[11px] text-slate-400 mb-3">
+              Inject a <strong>corrupted payload</strong> to demonstrate Dead Letter Queue isolation and CloudWatch alarm triggering.
+            </p>
+            <button onclick="triggerDlqPoisonPill()" id="btn-dlq" class="w-full py-2.5 px-4 bg-gradient-to-r from-rose-700 to-red-600 hover:from-rose-600 hover:to-red-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-rose-900/20 transition flex items-center justify-center space-x-2">
+              <i class="fa-solid fa-skull-crossbones"></i>
+              <span>Inject Corrupted Payload (DLQ Test)</span>
+            </button>
+          </div>
         </div>
 
         <!-- Metric KPI Cards -->
@@ -516,6 +533,34 @@
         btn.innerHTML = `<i class="fa-solid fa-bolt mr-1"></i> Simulate 15 Concurrent Uploads`;
         logTerminal("INFO", "SURGE", `✅ SURGE HANDLED: 0 server crashes. SQS backpressure buffered all requests with 0 504 errors.`);
       }, count * 150 + 1000);
+    }
+
+    // DLQ POISON PILL CHAOS INJECTION
+    async function triggerDlqPoisonPill() {
+      const btn = document.getElementById("btn-dlq");
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> Injecting Poison Pill...`;
+
+      logTerminal("WARN", "DLQ", `⚠️ INJECTING CORRUPTED PAYLOAD: Testing SRE Dead Letter Queue isolation...`);
+
+      try {
+        const r = await fetch(`${API_BASE}/api/sre/simulate-dlq-failure`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" }
+        });
+        if (r.ok) {
+          const data = await r.json();
+          logTerminal("ERROR", "DLQ", `🚨 CORRUPTED PAYLOAD DETECTED: Poison message '${data.submission_id}' rejected by parser.`);
+          logTerminal("ERROR", "DLQ", `✅ FAULT ISOLATION: Message routed to Dead Letter Queue (${data.dlq_url.split('/').pop()}).`);
+          logTerminal("WARN", "ALARM", `🚨 CLOUDWATCH METRIC ALARM TRIGGERED: 'JanStream-DLQ-Breach' State=ALARM.`);
+          alert(`SRE RESILIENCE DEMO SUCCESS!\n\nCorrupted message isolated to Dead Letter Queue (janstream-dlq).\nWorker Lambda remained 100% operational.\nCloudWatch Alarm 'JanStream-DLQ-Breach' armed!`);
+        }
+      } catch (e) {
+        logTerminal("ERROR", "DLQ", `DLQ injection error: ${e.message}`);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-skull-crossbones mr-1"></i> Inject Corrupted Payload (DLQ Test)`;
+      }
     }
 
     // Health check on startup

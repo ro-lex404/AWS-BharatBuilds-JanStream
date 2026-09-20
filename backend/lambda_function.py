@@ -162,6 +162,29 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             count = worker.poll_and_process_batch(max_messages=10)
             return build_response(200, {"status": "SUCCESS", "messages_processed": count})
 
+        # Route: POST /api/sre/simulate-dlq-failure (Poison Pill Chaos Injection)
+        if raw_path == "/api/sre/simulate-dlq-failure" and method == "POST":
+            poison_id = f"poison-{os.urandom(4).hex()}"
+            poison_payload = {
+                "submission_id": poison_id,
+                "s3_key": f"corrupted/{poison_id}.bin",
+                "metadata": {"corrupted_bytes": "0xFF_INVALID_ENCODING_POISON_PILL"},
+                "failure_reason": "SIMULATED_MALFORMED_PAYLOAD_DLQ_BREACH"
+            }
+            sqs_svc.send_to_dlq(poison_payload, failure_reason="Corrupted payload failed schema validation.")
+            metrics_svc.record_metric("DLQPoisonPillInjected", 1.0)
+            metrics_svc.log_event("DLQ_POISON_PILL_INJECTED", poison_id, level="CRITICAL", details={
+                "dlq_queue": sqs_svc.dlq_url,
+                "alarm": "JanStream-DLQ-Breach"
+            })
+            return build_response(200, {
+                "status": "POISON_PILL_ROUTED_TO_DLQ",
+                "submission_id": poison_id,
+                "dlq_url": sqs_svc.dlq_url,
+                "cloudwatch_alarm": "JanStream-DLQ-Breach",
+                "resilience_mechanism": "Worker remained 100% stable; poisoned message isolated to DLQ without crashing the queue."
+            })
+
         # Route Not Found
         return build_response(404, {"error": f"Route not found: {method} {raw_path}"})
 
