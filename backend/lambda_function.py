@@ -197,8 +197,9 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             ddb_count = 0
             try:
                 if db_svc.table:
-                    ddb_desc = db_svc.dynamodb.meta.client.describe_table(TableName=db_svc.table_name)
-                    ddb_count = ddb_desc.get("Table", {}).get("ItemCount", 0)
+                    # Use Scan with Select='COUNT' to get exact real-time count (DescribeTable is delayed by 6 hours)
+                    ddb_scan = db_svc.dynamodb.meta.client.scan(TableName=db_svc.table_name, Select="COUNT")
+                    ddb_count = ddb_scan.get("Count", 0)
             except Exception as e:
                 logger.warning(f"Failed to fetch DynamoDB count: {e}")
 

@@ -123,7 +123,7 @@
           </div>
           <div class="text-2xl text-cloud-sqs my-1"><i class="fa-solid fa-layer-group"></i></div>
           <div id="cnt-sqs" class="text-lg font-bold text-white">0</div>
-          <div class="text-[10px] text-slate-500">Queue Depth (DLQ: 0)</div>
+          <div id="sub-sqs" class="text-[10px] text-slate-500">Queue Depth (DLQ: 0)</div>
         </div>
 
         <!-- Node 4: AWS Lambda Worker -->
@@ -600,12 +600,16 @@
             const el = document.getElementById("cnt-sqs");
             if (el) el.innerText = sData.ingest_queue_depth;
           }
+          if (sData.dlq_messages_count !== undefined) {
+            const dlqEl = document.getElementById("sub-sqs");
+            if (dlqEl) dlqEl.innerText = `Queue Depth (DLQ: ${sData.dlq_messages_count})`;
+          }
           if (sData.dynamodb_items_count !== undefined) {
             stats.dynamo = sData.dynamodb_items_count;
             const el = document.getElementById("cnt-dynamo");
             if (el) el.innerText = sData.dynamodb_items_count;
           }
-          logTerminal("INFO", "AWS", `Live Telemetry Synced: ${sData.s3_objects_count || 154} S3 Vault Objects, ${sData.dynamodb_items_count || 84} DynamoDB Records.`);
+          logTerminal("INFO", "AWS", `Live Telemetry: ${sData.s3_objects_count} S3 Objects, ${sData.dynamodb_items_count} DynamoDB Records, ${sData.ingest_queue_depth} SQS Messages (DLQ: ${sData.dlq_messages_count || 0})`);
         }
       } catch (err) {
         console.warn("Could not sync live stats:", err);
