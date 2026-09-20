@@ -3,6 +3,21 @@ Automated Test Suite - JanStream Pipeline
 Used by GitHub Actions CI/CD to verify ingestion, queueing, triage, and state transitions.
 """
 
+import os
+import sys
+
+# Ensure backend root is in sys.path
+backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
+
+# Mock AWS credentials for isolated CI unit tests
+os.environ.setdefault("AWS_ACCESS_KEY_ID", "testing")
+os.environ.setdefault("AWS_SECRET_ACCESS_KEY", "testing")
+os.environ.setdefault("AWS_SECURITY_TOKEN", "testing")
+os.environ.setdefault("AWS_SESSION_TOKEN", "testing")
+os.environ.setdefault("AWS_DEFAULT_REGION", "us-east-1")
+
 import pytest
 from app.services.s3_service import S3Service
 from app.services.sqs_service import SQSService

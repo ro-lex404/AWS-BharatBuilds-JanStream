@@ -36,9 +36,13 @@ jobs:
     - name: Run Automated Pytest Suite
       env:
         AWS_DEFAULT_REGION: us-east-1
+        AWS_ACCESS_KEY_ID: testing
+        AWS_SECRET_ACCESS_KEY: testing
+        AWS_SECURITY_TOKEN: testing
+        AWS_SESSION_TOKEN: testing
+        PYTHONPATH: backend
       run: |
-        cd backend
-        python -m pytest tests/
+        python -m pytest backend/tests/ -v
 
   deploy-gate:
     needs: test-and-lint
