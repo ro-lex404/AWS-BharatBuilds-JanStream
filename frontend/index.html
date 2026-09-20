@@ -101,7 +101,7 @@
           <div class="text-xs text-slate-400 uppercase font-semibold mb-1">1. Citizen Client</div>
           <div class="text-2xl text-blue-400 my-1"><i class="fa-solid fa-mobile-screen"></i></div>
           <div id="cnt-client" class="text-lg font-bold text-white">0</div>
-          <div class="text-[10px] text-slate-500">Submissions</div>
+          <div class="text-[10px] text-slate-500">Total Submissions</div>
         </div>
 
         <!-- Node 2: Amazon S3 -->
@@ -112,7 +112,7 @@
           </div>
           <div class="text-2xl text-cloud-s3 my-1"><i class="fa-solid fa-bucket"></i></div>
           <div id="cnt-s3" class="text-lg font-bold text-white">0</div>
-          <div class="text-[10px] text-slate-500">Presigned PUTs</div>
+          <div class="text-[10px] text-slate-500">Presigned Objects</div>
         </div>
 
         <!-- Node 3: Amazon SQS Queue -->
@@ -134,7 +134,7 @@
           </div>
           <div class="text-2xl text-cloud-lambda my-1"><i class="fa-solid fa-bolt"></i></div>
           <div id="cnt-lambda" class="text-lg font-bold text-white">0</div>
-          <div class="text-[10px] text-slate-500">Invocations</div>
+          <div class="text-[10px] text-slate-500">Worker Invocations</div>
         </div>
 
         <!-- Node 5: Amazon Bedrock -->
@@ -145,7 +145,7 @@
           </div>
           <div class="text-2xl text-cloud-bedrock my-1"><i class="fa-solid fa-brain"></i></div>
           <div id="cnt-bedrock" class="text-lg font-bold text-white">0</div>
-          <div class="text-[10px] text-slate-500">Claude Triage</div>
+          <div class="text-[10px] text-slate-500">Claude AI Triages</div>
         </div>
 
         <!-- Node 6: Amazon DynamoDB -->
@@ -590,26 +590,57 @@
         const sr = await fetch(`${API_BASE}/api/sre/stats`);
         if (sr.ok) {
           const sData = await sr.json();
-          if (sData.s3_objects_count !== undefined) {
-            stats.s3 = sData.s3_objects_count;
-            const el = document.getElementById("cnt-s3");
-            if (el) el.innerText = sData.s3_objects_count;
+          const baseCount = sData.dynamodb_items_count || sData.citizen_submissions_count || 0;
+
+          // Sync Client Submissions
+          if (sData.citizen_submissions_count !== undefined || baseCount > 0) {
+            stats.client = Math.max(stats.client, sData.citizen_submissions_count || baseCount);
+            const el = document.getElementById("cnt-client");
+            if (el) el.innerText = stats.client;
           }
+
+          // Sync S3 Vault
+          if (sData.s3_objects_count !== undefined) {
+            stats.s3 = Math.max(stats.s3, sData.s3_objects_count);
+            const el = document.getElementById("cnt-s3");
+            if (el) el.innerText = stats.s3;
+          }
+
+          // Sync SQS Buffer
           if (sData.ingest_queue_depth !== undefined) {
             stats.sqs = sData.ingest_queue_depth;
             const el = document.getElementById("cnt-sqs");
-            if (el) el.innerText = sData.ingest_queue_depth;
+            if (el) el.innerText = stats.sqs;
           }
+
+          // Sync DLQ Fault Count
           if (sData.dlq_messages_count !== undefined) {
             const dlqEl = document.getElementById("sub-sqs");
             if (dlqEl) dlqEl.innerText = `Queue Depth (DLQ: ${sData.dlq_messages_count})`;
           }
-          if (sData.dynamodb_items_count !== undefined) {
-            stats.dynamo = sData.dynamodb_items_count;
-            const el = document.getElementById("cnt-dynamo");
-            if (el) el.innerText = sData.dynamodb_items_count;
+
+          // Sync Lambda Invocations
+          if (sData.lambda_invocations_count !== undefined || baseCount > 0) {
+            stats.lambda = Math.max(stats.lambda, sData.lambda_invocations_count || baseCount);
+            const el = document.getElementById("cnt-lambda");
+            if (el) el.innerText = stats.lambda;
           }
-          logTerminal("INFO", "AWS", `Live Telemetry: ${sData.s3_objects_count} S3 Objects, ${sData.dynamodb_items_count} DynamoDB Records, ${sData.ingest_queue_depth} SQS Messages (DLQ: ${sData.dlq_messages_count || 0})`);
+
+          // Sync Bedrock AI Triages
+          if (sData.bedrock_triage_count !== undefined || baseCount > 0) {
+            stats.bedrock = Math.max(stats.bedrock, sData.bedrock_triage_count || baseCount);
+            const el = document.getElementById("cnt-bedrock");
+            if (el) el.innerText = stats.bedrock;
+          }
+
+          // Sync DynamoDB Records
+          if (sData.dynamodb_items_count !== undefined) {
+            stats.dynamo = Math.max(stats.dynamo, sData.dynamodb_items_count);
+            const el = document.getElementById("cnt-dynamo");
+            if (el) el.innerText = stats.dynamo;
+          }
+
+          logTerminal("INFO", "AWS", `Live Telemetry: ${stats.s3} S3 Objects, ${stats.dynamo} DynamoDB Records, ${stats.sqs} SQS Messages (DLQ: ${sData.dlq_messages_count || 0})`);
         }
       } catch (err) {
         console.warn("Could not sync live stats:", err);
