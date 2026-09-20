@@ -16,3 +16,10 @@ env/
 # OS artifacts
 .DS_Store
 Thumbs.db
+
+# Submission materials & local drafts
+AWS_BUILDER_BLOG.md
+YOUTUBE_PITCH_SCRIPT.txt
+blog_submission.txt
+critique.md
+*.zip
