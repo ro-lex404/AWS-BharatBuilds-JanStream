@@ -38,25 +38,25 @@ Across India, public portals for **scholarships, emergency disaster relief, univ
 
 ```mermaid
 flowchart LR
-    subgraph Client [Client Tier]
-        Citizen([Citizen / User]) -->|1. Request Presigned URL| API[FastAPI on App Runner]
-        Citizen -->|2. Direct Upload (0 Server RAM)| S3[(Amazon S3)]
+    subgraph Client["Client Tier"]
+        Citizen(["Citizen / User"]) -->|"1. Request Presigned URL"| API["AWS Lambda (API Function URL)"]
+        Citizen -->|"2. Direct Upload (Zero Server RAM)"| S3[("Amazon S3 Bucket")]
     end
 
-    subgraph Messaging [Asynchronous Ingestion]
-        API -->|3. Buffer Event| SQS[Amazon SQS Queue]
-        SQS -->|4. Pull Batch| Worker[Lambda / Worker Pool]
-        Worker -.->|On Failure after 3 Retries| DLQ[Dead Letter Queue\nDLQ]
+    subgraph Ingestion["Asynchronous Buffer Tier"]
+        API -->|"3. Buffer Ingestion Event"| SQS["Amazon SQS Ingestion Queue"]
+        SQS -->|"4. Consume Batch"| Worker["AWS Lambda Worker"]
+        Worker -.->|"On 3x Failure"| DLQ["Dead Letter Queue (DLQ)"]
     end
 
-    subgraph Intelligence [AI & State]
-        Worker -->|5. Triage & Extraction| Bedrock[Amazon Bedrock\nClaude 3.5 Haiku]
-        Worker -->|6. Save State| DynamoDB[(Amazon DynamoDB)]
+    subgraph Intelligence["AI Triage & State Tier"]
+        Worker -->|"5. Vernacular AI Triage"| Bedrock["Amazon Bedrock (Claude 3.5 Haiku)"]
+        Worker -->|"6. Commit State"| DynamoDB[("Amazon DynamoDB")]
     end
 
-    subgraph Observability [SRE Telemetry]
-        Worker -->|Structured Logs & Metrics| CloudWatch[AWS CloudWatch]
-        CloudWatch -->|Alarm: DLQ > 0 or Latency Spike| SNS[Amazon SNS Alert]
+    subgraph Observability["Observability & SRE Tier"]
+        Worker -->|"Structured Logs & Metrics"| CloudWatch["Amazon CloudWatch"]
+        CloudWatch -->|"Alarm: DLQ Breach"| SNS["Amazon SNS Alert"]
     end
 ```
 
