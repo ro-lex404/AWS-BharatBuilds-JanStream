@@ -1,12 +1,15 @@
 # ⚡ JanStream — Resilient Public Ingestion & Emergency Triage Engine
 
 [![JanStream CI/CD](https://github.com/ro-lex404/AWS-BharatBuilds-JanStream/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/ro-lex404/AWS-BharatBuilds-JanStream/actions)
+[![Live Demo](https://img.shields.io/badge/Demo-Live%20on%20AWS%20Amplify-success?logo=aws-amplify)](https://main.d1gdvhx1kit3yw.amplifyapp.com/)
 [![AWS Architecture: Serverless](https://img.shields.io/badge/AWS-Serverless-orange?logo=amazon-aws)](https://aws.amazon.com)
 [![Foundation Model: Bedrock](https://img.shields.io/badge/AI-Amazon%20Bedrock-purple)](https://aws.amazon.com/bedrock)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-> **Built for Bharat Builds Tour: First Commit**  
-> *Organized by WeMakeDevs in association with Amazon Web Services (AWS).*
+> 🌐 **Live Production Dashboard:** [https://main.d1gdvhx1kit3yw.amplifyapp.com/](https://main.d1gdvhx1kit3yw.amplifyapp.com/)  
+> ⚡ **Serverless API (Lambda URL):** [https://k5ozslqcrpti26q26gqwbgkta40zelma.lambda-url.us-east-1.on.aws/health](https://k5ozslqcrpti26q26gqwbgkta40zelma.lambda-url.us-east-1.on.aws/health)  
+> 📊 **Live SRE Cloud Telemetry:** [https://k5ozslqcrpti26q26gqwbgkta40zelma.lambda-url.us-east-1.on.aws/api/sre/stats](https://k5ozslqcrpti26q26gqwbgkta40zelma.lambda-url.us-east-1.on.aws/api/sre/stats)  
+> 🏆 **Built for Bharat Builds Tour: First Commit** *(Organized by WeMakeDevs & AWS)*
 
 ---
 
@@ -99,9 +102,11 @@ python -m uvicorn app.main:app --reload --port 8000
 * **Health Endpoint:** `http://127.0.0.1:8000/health`
 
 ### 3. Open the SRE Mission Control Dashboard
-Open `frontend/index.html` in your browser.
+* **Live Hosted Dashboard:** Access directly at [https://main.d1gdvhx1kit3yw.amplifyapp.com/](https://main.d1gdvhx1kit3yw.amplifyapp.com/)
+* **Or Run Locally:** Open `frontend/index.html` in any browser.
 * **Test Emergency Scenario:** Click *Critical: Live Wire in Water* $\rightarrow$ Watch the S3, SQS, Bedrock, and DynamoDB nodes pulse as data flows.
 * **Test Surge Simulator:** Click *Simulate 15 Concurrent Uploads* $\rightarrow$ Watch the SQS queue absorb the traffic burst with 0 server crashes.
+* **Test DLQ Fault Isolation:** Click *Inject Corrupted Payload (DLQ Test)* $\rightarrow$ Demonstrates dead-letter queue routing and CloudWatch alarm triggers.
 
 ---
 
